@@ -1,0 +1,68 @@
+{
+  "venue_id": "example_salon",
+  "display_name": "Example Salon (fast preview / iterate)",
+  "timezone": "Asia/Bangkok",
+  "source": {
+    "type": "file",
+    "path": "videos/input2.mp4"
+  },
+  "inference": {
+    "model": "yolo11n.pt",
+    "imgsz": 512,
+    "conf": 0.22,
+    "process_stride": 3,
+    "max_width": 640,
+    "roi_norm": [0.0, 0.35, 1.0, 1.0],
+    "iou": 0.5,
+    "max_det": 50
+  },
+  "rules": {
+    "min_occupancy_sec": 10,
+    "empty_debounce_sec": 25,
+    "grace_absent_sec": 5,
+    "seat_anchor": "center",
+    "min_box_height_frac": 0.028,
+    "min_seat_customer_conf": 0.45,
+    "standing_aspect_min": 2.0,
+    "require_standing_nearby": false,
+    "standing_nearby_dist_norm": 0.12,
+    "near_customer_pair_dist_norm": 0.22,
+    "require_blue_nearby": true,
+    "blue_nearby_dist_norm": 0.22,
+    "staff_aspect_min": 0.8
+    ,
+    "require_real_customer_for_counting": true
+    ,
+    "customer_persist_sec": 2.5
+    ,
+    "staff_overlap_mode": "area"
+    ,
+    "preview_speed": 1.5
+    ,
+    "blue_persist_sec": 0.9
+  },
+  "seats": [
+    {
+      "id": "seat_1",
+      "polygon_norm": [[0.32, 0.58], [0.52, 0.58], [0.48, 0.95], [0.28, 0.95]]
+    },
+    {
+      "id": "seat_2",
+      "polygon_norm": [[0.601, 0.435], [0.761, 0.435], [0.729, 0.731], [0.569, 0.731]]
+    }
+  ],
+  "staff_zones_norm": [],
+  "exclude_zones_norm": [],
+  "output": {
+    "preview_on_run": true,
+    "overlay_title": "",
+    "data_dir": "data/example_salon_fast",
+    "write_events_csv": true,
+    "write_daily_csv": true,
+    "write_daily_xlsx": true,
+    "debug_video": {
+      "enabled": false,
+      "path": "outputs/example_salon_fast_debug.mp4"
+    }
+  }
+}
