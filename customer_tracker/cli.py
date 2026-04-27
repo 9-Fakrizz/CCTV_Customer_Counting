@@ -22,9 +22,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument(
         "--video",
         "-v",
-        type=Path,
+        type=str,
         default=None,
-        help="Override video file path (optional)",
+        help="Override video file path or stream URL (optional)",
     )
     p.add_argument(
         "--max-frames",
@@ -64,7 +64,7 @@ def main(argv: list[str] | None = None) -> int:
 
     result = run_from_config_path(
         args.config.resolve(),
-        override_video=args.video.resolve() if args.video else None,
+        override_video=str(args.video).strip() if args.video else None,
         max_frames=args.max_frames,
         preview=preview,
     )

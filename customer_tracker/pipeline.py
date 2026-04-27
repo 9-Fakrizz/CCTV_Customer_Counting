@@ -6,7 +6,7 @@ import time
 from collections import defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 from zoneinfo import ZoneInfo
 
 import cv2
@@ -190,8 +190,14 @@ def _parse_standing_aspect_min(rules: Dict[str, Any]) -> Optional[float]:
 
 
 def _event_time_from_video_sec(
-    video_sec: float, tz: ZoneInfo, anchor: Optional[datetime] = None
+    video_sec: float,
+    tz: ZoneInfo,
+    anchor: Optional[datetime] = None,
+    *,
+    realtime: bool = False,
 ) -> datetime:
+    if realtime:
+        return datetime.now(tz)
     if anchor is not None:
         return anchor + timedelta(seconds=float(video_sec))
     now = datetime.now(tz)
@@ -199,10 +205,28 @@ def _event_time_from_video_sec(
     return start + timedelta(seconds=float(video_sec))
 
 
+def _is_stream_source(raw: str) -> bool:
+    s = str(raw or "").strip().lower()
+    return (
+        s.startswith("rtsp://")
+        or s.startswith("rtsps://")
+        or s.startswith("http://")
+        or s.startswith("https://")
+    )
+
+
+def _source_display(src: Union[str, Path]) -> str:
+    return str(src) if isinstance(src, str) else str(src.resolve())
+
+
+def _open_capture(src: Union[str, Path]) -> cv2.VideoCapture:
+    return cv2.VideoCapture(str(src))
+
+
 def run_venue(
     cfg: VenueConfig,
     project_root: Path,
-    override_video: Optional[Path] = None,
+    override_video: Optional[Union[str, Path]] = None,
     max_frames: Optional[int] = None,
     preview: bool = False,
 ) -> Dict[str, Any]:
@@ -215,13 +239,26 @@ def run_venue(
         if anchor.tzinfo is None:
             anchor = anchor.replace(tzinfo=tz)
 
-    src = override_video or cfg.resolved_source_path(root)
-    if not src.is_file():
-        raise FileNotFoundError(f"Video/source not found: {src}")
+    src_path = override_video or cfg.resolved_source_path(root)
+    src: Union[str, Path] = src_path if not isinstance(src_path, str) else src_path.strip()
 
-    cap = cv2.VideoCapture(str(src))
+    declared_type = str((cfg.source_type or "")).strip().lower()
+    raw_src = str((cfg.source_path or "")).strip()
+    is_stream = bool(
+        declared_type in ("rtsp", "stream", "camera", "url") or _is_stream_source(raw_src)
+    )
+    if override_video is not None:
+        # Explicit override wins (can be a file path or a URL like rtsp://...)
+        is_stream = bool(isinstance(src, str) and _is_stream_source(src))
+    elif is_stream and raw_src:
+        src = raw_src
+    else:
+        if not isinstance(src, Path) or not src.is_file():
+            raise FileNotFoundError(f"Video/source not found: {src}")
+
+    cap = _open_capture(src)
     if not cap.isOpened():
-        raise RuntimeError(f"Could not open video: {src}")
+        raise RuntimeError(f"Could not open source: {_source_display(src)}")
 
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     if total_frames < 0:
@@ -328,10 +365,27 @@ def run_venue(
     last_dets: Any = []
     last_foot_points: List[Tuple[float, float]] = []
 
+    # Reconnect settings for realtime streams (best-effort).
+    reconnect_cfg = (cfg.inference or {}).get("reconnect") or {}
+    reconnect_enabled = bool(reconnect_cfg.get("enabled", True)) if is_stream else False
+    reconnect_backoff_sec = float(reconnect_cfg.get("backoff_sec", 1.0))
+    reconnect_max_tries = int(reconnect_cfg.get("max_tries", 0))  # 0 = infinite
+    reconnect_tries = 0
+
     while True:
         ok, frame = cap.read()
         if not ok:
-            break
+            if not reconnect_enabled:
+                break
+            reconnect_tries += 1
+            if reconnect_max_tries > 0 and reconnect_tries > reconnect_max_tries:
+                break
+            cap.release()
+            time.sleep(max(0.1, reconnect_backoff_sec))
+            cap = _open_capture(src)
+            if not cap.isOpened():
+                continue
+            continue
         if max_frames is not None and frame_idx >= max_frames:
             break
 
@@ -693,7 +747,9 @@ def run_venue(
         counted = engine.step(dt, occupied)
         for sid in counted:
             total_counts += 1
-            ev_time = _event_time_from_video_sec(video_sec, tz, anchor)
+            ev_time = _event_time_from_video_sec(
+                video_sec, tz, anchor, realtime=is_stream
+            )
             sink.record_customer_count(sid, when=ev_time)
 
         should_draw = (debug_path is not None) or preview
@@ -766,7 +822,7 @@ def run_venue(
         "processed_frames": processed,
         "customer_events": total_counts,
         "elapsed_sec": elapsed,
-        "source": str(src),
+        "source": _source_display(src),
         "debug_video": str(debug_path) if debug_path else None,
         "data_dir": str(data_dir),
         "preview": preview,
@@ -1523,7 +1579,7 @@ def _draw_overlay(
 
 def run_from_config_path(
     config_path: Path,
-    override_video: Optional[Path] = None,
+    override_video: Optional[Union[str, Path]] = None,
     max_frames: Optional[int] = None,
     preview: bool = False,
 ) -> Dict[str, Any]:
