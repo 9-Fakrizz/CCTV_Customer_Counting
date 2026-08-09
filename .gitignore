@@ -1,0 +1,14 @@
+.venv/
+*.egg-info/
+__pycache__/
+*.py[cod]
+*.pt
+*.onnx
+runs/
+outputs/
+data/
+*.xlsx~
+.DS_Store
+
+# Local test media
+videos/

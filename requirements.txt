@@ -1,0 +1,7 @@
+# Core (Raspberry Pi 4: prefer wheels; pin versions in production if needed)
+opencv-python-headless>=4.8.0
+# Optional on dev Mac/Windows for `python -m customer_tracker --preview`:
+#   pip install opencv-python
+ultralytics>=8.3.0
+numpy>=1.24.0
+openpyxl>=3.1.0

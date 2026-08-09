@@ -1,0 +1,53 @@
+{
+  "venue_id": "example_salon",
+  "display_name": "Example Salon",
+  "timezone": "Asia/Bangkok",
+  "source": {
+    "type": "file",
+    "path": "videos/input1.mp4"
+  },
+  "inference": {
+    "model": "yolo11s.pt",
+    "imgsz": 960,
+    "conf": 0.4,
+    "process_stride": 1,
+    "max_width": 1280,
+    "iou": 0.5,
+    "max_det": 50
+  },
+  "rules": {
+    "min_occupancy_sec": 300,
+    "empty_debounce_sec": 90,
+    "grace_absent_sec": 10,
+    "seat_anchor": "center",
+    "min_box_height_frac": 0.032,
+    "standing_aspect_min": 2.0,
+    "require_standing_nearby": true,
+    "standing_nearby_dist_norm": 0.12,
+    "near_customer_pair_dist_norm": 0.22,
+    "staff_aspect_min": 0.8
+  },
+  "seats": [
+    {
+      "id": "seat_1",
+      "polygon_norm": [[0.32, 0.58], [0.52, 0.58], [0.48, 0.95], [0.28, 0.95]]
+    },
+    {
+      "id": "seat_2",
+      "polygon_norm": [[0.62, 0.57], [0.77, 0.52], [0.83, 0.79], [0.64, 0.85]]
+    }
+  ],
+  "staff_zones_norm": [],
+  "exclude_zones_norm": [],
+  "output": {
+    "overlay_title": "",
+    "data_dir": "data/example_salon",
+    "write_events_csv": true,
+    "write_daily_csv": true,
+    "write_daily_xlsx": true,
+    "debug_video": {
+      "enabled": true,
+      "path": "outputs/example_salon_debug.mp4"
+    }
+  }
+}

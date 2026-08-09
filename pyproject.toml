@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "customer-tracker"
+version = "0.1.0"
+description = "Seat-based customer counting from CCTV (YOLO + ROI timers)"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "opencv-python-headless>=4.8.0",
+  "ultralytics>=8.3.0",
+  "numpy>=1.24.0",
+  "openpyxl>=3.1.0",
+]
+
+[project.scripts]
+customer-tracker = "customer_tracker.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["customer_tracker*"]
